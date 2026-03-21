@@ -41,7 +41,7 @@ If you want to go deeper — the hooks that enforce this in tooling, the approva
 
 ## If You Use This
 
-This framework is free to use and adapt. If it's useful, a shout-out is appreciated — tag me on [LinkedIn](https://www.linkedin.com/in/michaelalbers/) or drop me a note at michael@albersadvisory.biz. I'd genuinely like to know how you've adapted it.
+This framework is free to use and adapt. If it's useful, a shout-out is appreciated — tag me on [LinkedIn](https://www.linkedin.com/in/malbers/) or drop me a note at michael@albersadvisory.biz. I'd genuinely like to know how you've adapted it.
 
 ---
 
