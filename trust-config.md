@@ -1,5 +1,5 @@
 # AI Trust & Privacy Configuration — Generic Template
-**Version:** 1.0
+**Version:** 1.1
 **Author:** Michael Albers, Albers Advisory (michael@albersadvisory.biz)
 **Purpose:** A framework for defining rules of engagement between you and any AI system operating on your behalf. Adapt it to your tools, projects, and risk tolerance. The value isn't the document — it's making the decisions explicit and then enforcing them in your tooling.
 
@@ -32,6 +32,14 @@
 
 ### The leaky layer rule:
 The conversation window is the leaky layer — not the files. You can keep sensitive data in local files and reference them by path. The chat itself travels to the AI provider.
+
+### Travel brief / mobile rule:
+When using cloud AI tools (mobile apps, web interfaces) outside your controlled setup:
+- Do not include real names of third-party contacts in any prompt
+- Do not include deal-sensitive context (why someone left a company, legal details, financial terms)
+- Abstract contacts to roles only: "former colleague", "potential client intro", "board contact"
+- Your own name, background, and public-facing info is OK
+- When in doubt: if you wouldn't put it in a tweet, don't put it in a cloud AI prompt
 
 ---
 
@@ -101,7 +109,18 @@ The conversation window is the leaky layer — not the files. You can keep sensi
 
 ---
 
-## 6. Context & Memory Preservation
+## 6. Inbound Data (External Data Coming In)
+
+Reading external content (webpages, emails, files) is generally fine. The risk runs the other way: ingested content can contain PII or credentials that then get processed — and potentially echoed back — by the AI.
+
+### Rules:
+- If ingested content contains PII, credentials, or financial data belonging to others: do not process further without awareness; flag and ask
+- **Behavioral rule:** when processing files, email headers, or logs containing PII — reference that the data exists without echoing it back verbatim unless directly necessary. Say "the sender's address" not the address itself.
+- **Known gap:** outbound PII hooks (see Section 10) catch what *you* type; they do not automatically catch PII in content the AI reads and repeats back. A PostToolUse hook scanning AI responses closes this gap — worth building if you're ingesting sensitive sources regularly.
+
+---
+
+## 7. Context & Memory Preservation
 
 Context and memory follow the same non-destructive principles as files and actions.
 
@@ -112,7 +131,7 @@ Context and memory follow the same non-destructive principles as files and actio
 
 ---
 
-## 7. Audit Trail
+## 8. Audit Trail
 
 - Maintain a running log of non-trivial actions taken on your behalf
 - Suggested format: `[date] [tool/system] [action] [approved / auto]`
@@ -120,7 +139,7 @@ Context and memory follow the same non-destructive principles as files and actio
 
 ---
 
-## 8. Onboarding a New Tool or Integration
+## 9. Onboarding a New Tool or Integration
 
 Before granting access to any new system, answer:
 1. Who built it? Known company or unknown?
@@ -133,7 +152,7 @@ Start new tools at **Trust Level 0**. Grant Level 1 if the company is recognized
 
 ---
 
-## 9. Approval Fallback (When You're Unavailable)
+## 10. Approval Fallback (When You're Unavailable)
 
 If an action requires approval and you're not reachable:
 1. Do not proceed — hold the action
@@ -142,9 +161,22 @@ If an action requires approval and you're not reachable:
 
 ---
 
-## 10. The Real Point
+## 11. Enforcement Over Policy
 
-A document like this is easy to write and easy to ignore. The value comes from **enforcement** — wiring these rules into your actual tooling so the AI can't accidentally violate them even when you're not paying attention. That might mean hooks that intercept outgoing messages, approval flows in whatever interface you use day-to-day, or simply loading this file at the start of every session so the AI reads it before doing anything else. The philosophy is the easy part. The implementation is where it becomes real.
+A document like this is easy to write and easy to ignore. The value comes from wiring these rules into your actual tooling — so the AI can't accidentally violate them even when you're not paying attention.
+
+### Enforcement mechanisms worth building:
+
+**Outbound PII hook** — intercepts every outgoing message before it reaches the AI provider; blocks if it finds emails, phone numbers, tokens, or other sensitive patterns. [`hooks/pii_check.py`](./hooks/pii_check.py) in this repo is a working implementation for Claude Code. It detects 11 pattern types and fails open — if the script errors, it never blocks your workflow.
+
+**Approval flows** — irreversible and external actions require per-action confirmation; no auto-escalation. Wire this into whatever interface you use day-to-day (Telegram, CLI, web UI).
+
+**Session loading** — load this config at the start of every AI session so the AI reads the policy before doing anything else. In Claude Code: reference it from your `CLAUDE.md` file.
+
+**Version control** — keep this file in git. Changes should be intentional and tracked, not drift.
+
+### The principle:
+When adding new capabilities to your AI setup, ask not just "can it do this?" but "what is it *allowed* to do, and how is that enforced?" The philosophy is the easy part. The implementation is where trust becomes real.
 
 ---
 
