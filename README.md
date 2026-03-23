@@ -29,9 +29,67 @@ Adapt it, version-control it, load it at the start of every AI session. The phil
 
 ---
 
+## Enforcement: The PII Hook
+
+The config file defines the rules. The hooks enforce them.
+
+[`hooks/pii_check.py`](./hooks/pii_check.py) is a Claude Code `UserPromptSubmit` hook that scans every outgoing message before it reaches Anthropic. If it finds sensitive data, it blocks the prompt and tells you what it caught.
+
+**What it detects:**
+
+| Category | Patterns |
+|----------|----------|
+| Personal | Email, phone (US + international), SSN (with and without dashes) |
+| Financial | Credit card numbers (Visa, Mastercard, Amex) |
+| Network | IPv4 addresses |
+| Tokens & secrets | GitHub tokens, AWS access keys, Anthropic keys, OpenAI keys, JWTs, private key blocks |
+
+PII patterns adapted from [DataFog datafog-python](https://github.com/DataFog/datafog-python) (MIT License). Token patterns are original.
+
+**Installing the hook:**
+
+1. Copy `hooks/pii_check.py` somewhere on your machine (e.g. `~/.claude/hooks/pii_check.py`)
+2. Add to your Claude Code settings (`.claude/settings.json`):
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [{
+      "matcher": "",
+      "hooks": [{
+        "type": "command",
+        "command": "python /absolute/path/to/hooks/pii_check.py"
+      }]
+    }]
+  }
+}
+```
+
+3. No restart needed — the hook runs fresh on every prompt.
+
+**Testing it:**
+
+Paste a fake token into your next Claude Code prompt:
+
+```
+my test token is ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890
+```
+
+You should see:
+
+```
+[PII WARNING] Sensitive data detected before sending to Anthropic:
+  GitHub token: ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890
+Consider referencing a local file instead. See trust-config.md.
+```
+
+The hook always fails open — if the script errors for any reason, it exits 0 and lets the prompt through. It never silently breaks your workflow.
+
+---
+
 ## Background
 
-I built this after spending a year running Claude as a full-time operating layer across two businesses. I needed a way to be explicit about what it could and couldn't do — not as a vague preference, but as a documented, enforced policy. What started as a personal config file turned into a framework I now share with other practitioners.
+I built this after spending the last several months running Claude as a full-time operating layer across two businesses. I needed a way to be explicit about what it could and couldn't do — not as a vague preference, but as a documented, enforced policy. What started as a personal config file turned into a framework I now share with other practitioners.
 
 I've used this with AI cohorts, startup founders, and senior operators learning to work with agentic AI. The trust tier model in particular tends to change how people think about what "AI autonomy" actually means in practice.
 
