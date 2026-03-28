@@ -2,6 +2,13 @@
 
 A framework for defining how AI systems earn the right to act on your behalf.
 
+**Last updated:** March 2026
+
+### Recent updates
+- **Inbound PII hook** (`hooks/pii_check_inbound.py`) — PostToolUse scanner catches PII in tool output before Claude echoes it back. Advisory-only, allowlist-driven, never blocks workflow.
+- **Shell command credential rule** (trust-config v1.2) — command strings are API payloads too; file-based injection pattern added with enforcement hook roadmap.
+- **Outbound PII hook** (`hooks/pii_check.py`) — UserPromptSubmit scanner, 11 pattern types, blocks before transmission to provider.
+
 ---
 
 ## The Idea
@@ -84,6 +91,44 @@ Consider referencing a local file instead. See trust-config.md.
 ```
 
 The hook always fails open — if the script errors for any reason, it exits 0 and lets the prompt through. It never silently breaks your workflow.
+
+---
+
+## Enforcement: Inbound PII Hook
+
+[`hooks/pii_check_inbound.py`](./hooks/pii_check_inbound.py) is a Claude Code `PostToolUse` hook that scans tool output (Bash, WebFetch) before Claude incorporates it into a response. The outbound hook catches what you type. This hook catches what comes back.
+
+**Why it matters:** tool output is part of the API payload. If Claude reads a curl response containing a token and quotes it in its reply, that token goes to the AI provider — even if you never typed it.
+
+**How it works:** advisory-only. When sensitive data is found, it injects a system message telling Claude to reference the data by description rather than value. It never blocks or interrupts your workflow.
+
+**Allowlist:** create `~/.secrets/pii_allowlist.txt` with one value per line. Known-safe values (your own email, service addresses) are silently skipped, preventing the hook from becoming noise.
+
+```
+# ~/.secrets/pii_allowlist.txt
+your-own@email.com
+noreply@someservice.com
+```
+
+**Installing the hook:**
+
+Add to your Claude Code settings (`.claude/settings.json`):
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [{
+      "matcher": "Bash|WebFetch",
+      "hooks": [{
+        "type": "command",
+        "command": "python /absolute/path/to/hooks/pii_check_inbound.py"
+      }]
+    }]
+  }
+}
+```
+
+**Patterns detected:** same 10 types as the outbound hook (email, phone, SSN, credit card, GitHub token, AWS key, Anthropic key, OpenAI key, JWT, private key) — IP addresses excluded to avoid noise from server addresses in shell output.
 
 ---
 
