@@ -182,11 +182,14 @@ def main():
         sys.exit(0)  # fail-open
 
     if hits:
+        RED   = "\033[31m"
+        BOLD  = "\033[1m"
+        RESET = "\033[0m"
         lines = [
-            "[PII ADVISORY] Sensitive data in tool output — reference by description, not value:"
+            f"{BOLD}{RED}🔴 [PII ADVISORY] Sensitive data in tool output — reference by description, not value:{RESET}"
         ]
         for label, count in hits:
-            lines.append(f"  {label}: {count} match(es)")
+            lines.append(f"  {RED}{label}: {count} match(es){RESET}")
         lines.append(
             "Best practice: say 'the token in the output' not the token itself. "
             "To suppress known-safe values, add them to your allowlist file "
