@@ -1,5 +1,5 @@
 # AI Trust & Privacy Configuration — Generic Template
-**Version:** 1.1
+**Version:** 1.2
 **Author:** Michael Albers, Albers Advisory (michael@albersadvisory.biz)
 **Purpose:** A framework for defining rules of engagement between you and any AI system operating on your behalf. Adapt it to your tools, projects, and risk tolerance. The value isn't the document — it's making the decisions explicit and then enforcing them in your tooling.
 
@@ -23,6 +23,13 @@
 - **Never type passwords, API keys, or tokens directly into an AI chat window** — they are transmitted to the AI provider
 - Instead: write a local script with a placeholder, fill it in directly outside the chat, credentials stay local
 - Same applies to any sensitive auth data (OAuth tokens, secrets, etc.)
+- Keep all credentials in a local secrets directory (e.g. `~/.secrets/` or `~/.claude/.secrets/`) — reference them by path, never by value in conversation
+
+### Shell command credential rule:
+- When an AI runs shell commands on your behalf, the **command string is transmitted to the AI provider as part of the tool call payload** — inline credentials in command strings = credentials in the payload
+- **Never inline credentials in commands**: `curl -H "Authorization: Bearer sk-abc123"` — the token goes to the provider
+- **Use file-based injection**: `curl -H "Authorization: Bearer $(cat ~/.secrets/token_file)"` — the token stays local, never in the payload
+- Same applies to: `--password`, `--token`, `--api-key` flags, and inline env vars like `API_KEY=secret ./script.sh`
 
 ### OK to store in cloud / conversation history:
 - Todos, task lists, project notes
@@ -168,6 +175,8 @@ A document like this is easy to write and easy to ignore. The value comes from w
 ### Enforcement mechanisms worth building:
 
 **Outbound PII hook** — intercepts every outgoing message before it reaches the AI provider; blocks if it finds emails, phone numbers, tokens, or other sensitive patterns. [`hooks/pii_check.py`](./hooks/pii_check.py) in this repo is a working implementation for Claude Code. It detects 11 pattern types and fails open — if the script errors, it never blocks your workflow.
+
+**Pre-execution command scan** — a `PreToolUse` hook on Bash commands can scan for inline credential patterns before the command runs and warn you to use file-based injection instead. This converts the shell command credential rule above from a behavioral guideline into an automated check. Worth building if you regularly run authenticated shell commands through your AI setup.
 
 **Approval flows** — irreversible and external actions require per-action confirmation; no auto-escalation. Wire this into whatever interface you use day-to-day (Telegram, CLI, web UI).
 

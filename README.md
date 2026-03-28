@@ -87,6 +87,30 @@ The hook always fails open — if the script errors for any reason, it exits 0 a
 
 ---
 
+## Enforcement: Shell Command Credentials
+
+The PII hook catches what you type. It doesn't catch credentials that appear inside shell commands Claude runs on your behalf.
+
+When an AI executes a bash command, the full command string is transmitted to the provider as part of the tool call payload. An inline credential in a command is just as exposed as typing it directly in the chat window.
+
+**The pattern to avoid:**
+```bash
+# The token travels to Anthropic as part of the tool call
+curl -H "Authorization: Bearer ghp_abc123..." api.github.com
+```
+
+**The pattern to use:**
+```bash
+# The token stays local — only the file path appears in the payload
+curl -H "Authorization: Bearer $(cat ~/.secrets/github_token)" api.github.com
+```
+
+Keep all tokens and secrets in a local secrets directory (e.g. `~/.secrets/` or `~/.claude/.secrets/`). Reference them by path in any command the AI runs. The same applies to `--password`, `--token`, `--api-key` flags, and inline env vars like `API_KEY=secret ./script.sh`.
+
+A `PreToolUse` hook on Bash commands can automate this — scanning for inline credential patterns before the command runs and warning you to use file-based injection instead. The rule is in the config; the hook makes it enforceable.
+
+---
+
 ## Background
 
 I built this after spending the last several months running Claude as a full-time operating layer across two businesses. I needed a way to be explicit about what it could and couldn't do — not as a vague preference, but as a documented, enforced policy. What started as a personal config file turned into a framework I now share with other practitioners.
