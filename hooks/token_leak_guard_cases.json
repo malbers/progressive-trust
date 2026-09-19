@@ -1,0 +1,165 @@
+{
+  "_comment": [
+    "Fixture for `python3 token_leak_guard.py --selftest`.",
+    "",
+    "NO REAL CREDENTIALS ARE IN THIS FILE. Every token-shaped string is a fake built to",
+    "match a prefix pattern and nothing else. That is deliberate and it is the point:",
+    "a control that inspects requests cannot be tested by making requests, because every",
+    "probe is itself a request the control will judge. Holding the cases in a data file",
+    "and calling decide() as a library function is the only verification path that does",
+    "not bypass the thing being verified.",
+    "",
+    "Each case: command (the string decide() sees), expect ('block' or 'pass'), note.",
+    "",
+    "The 'pass' cases matter as much as the 'block' cases. A guard tuned only for catches",
+    "drifts toward blocking ordinary work, and a guard that blocks ordinary work gets",
+    "uninstalled or worked around. Add a pass case every time you widen a pattern."
+  ],
+  "cases": [
+    {
+      "command": "cat ~/.secrets/openai_key",
+      "expect": "block",
+      "note": "cat a credentials-location file"
+    },
+    {
+      "command": "head -c 400 ~/.secrets/openai_key",
+      "expect": "block",
+      "note": "head with flags - the classic cat-only gap"
+    },
+    {
+      "command": "base64 ~/.claude/.secrets/github_token",
+      "expect": "block",
+      "note": "base64 as a reader"
+    },
+    {
+      "command": "git remote get-url origin",
+      "expect": "block",
+      "note": "git remote can carry an embedded token"
+    },
+    {
+      "command": "git remote -v",
+      "expect": "block",
+      "note": "same exposure via the -v porcelain"
+    },
+    {
+      "command": "cat .git/config",
+      "expect": "block",
+      "note": "location gap - same token, plain file read"
+    },
+    {
+      "command": "cat ~/.claude.json",
+      "expect": "block",
+      "note": "MCP config holds bearer tokens in headers"
+    },
+    {
+      "command": "cat .env",
+      "expect": "block",
+      "note": "bare .env read"
+    },
+    {
+      "command": "cat .env.example",
+      "expect": "pass",
+      "note": "allowlisted - example files hold no secrets"
+    },
+    {
+      "command": "cat .env.template",
+      "expect": "pass",
+      "note": "allowlisted template"
+    },
+    {
+      "command": "python3 -c \"print(open('/home/u/.secrets/api_token').read())\"",
+      "expect": "block",
+      "note": "inline interpreter reading a credentials path"
+    },
+    {
+      "command": "py -3 -c \"import json; d=json.load(open(r'C:\\\\Users\\\\u\\\\.claude.json'))\"",
+      "expect": "block",
+      "note": "raw-string prefix - the natural Windows form"
+    },
+    {
+      "command": "node -e \"console.log(require('fs').readFileSync('/home/u/.secrets/t'))\"",
+      "expect": "block",
+      "note": "inline interpreter, node variant"
+    },
+    {
+      "command": "python3 -c \"print(open('README.md').read())\"",
+      "expect": "pass",
+      "note": "inline interpreter reading an ordinary file"
+    },
+    {
+      "command": "env",
+      "expect": "block",
+      "note": "bare env dumps everything"
+    },
+    {
+      "command": "env | grep -i token",
+      "expect": "block",
+      "note": "env filtered to credentials"
+    },
+    {
+      "command": "printenv OPENAI_API_KEY",
+      "expect": "block",
+      "note": "printenv of a credential-named var"
+    },
+    {
+      "command": "printenv HOME",
+      "expect": "pass",
+      "note": "printenv of an ordinary var"
+    },
+    {
+      "command": "gh auth token",
+      "expect": "block",
+      "note": "CLI that prints a token by design"
+    },
+    {
+      "command": "curl -H \"Authorization: Bearer ghp_FAKEfake0000000000000000000000000000\" https://api.github.com/user",
+      "expect": "block",
+      "note": "inline credential - GitHub PAT prefix (fake)"
+    },
+    {
+      "command": "curl -H \"Authorization: Bearer sk-ant-FAKEfake00000000000000000000\" https://api.anthropic.com/v1/messages",
+      "expect": "block",
+      "note": "inline credential - Anthropic prefix (fake)"
+    },
+    {
+      "command": "psql postgresql://appuser:hunter2hunter2@db.internal:5432/app",
+      "expect": "block",
+      "note": "database URI carrying user:pass"
+    },
+    {
+      "command": "mysql --password=s3cr3tvalue -h db.internal",
+      "expect": "block",
+      "note": "--password with a literal value"
+    },
+    {
+      "command": "mysql --password=$DB_PASS -h db.internal",
+      "expect": "pass",
+      "note": "shell expansion of an exported var is fine"
+    },
+    {
+      "command": "API_TOKEN=abcd1234efgh5678 ./deploy.sh",
+      "expect": "block",
+      "note": "inline VAR=<literal> assignment"
+    },
+    {
+      "command": "API_TOKEN=$CI_TOKEN ./deploy.sh",
+      "expect": "pass",
+      "note": "expansion, not a literal"
+    },
+    {
+      "command": "git config --local user.name",
+      "expect": "pass",
+      "note": "ordinary git config read, not a file read"
+    },
+    {
+      "command": "ls ~/.secrets/",
+      "expect": "pass",
+      "note": "listing names is not reading values"
+    },
+    {
+      "command": "python3 scripts/authed_call.py --secret-name github_token --url https://api.github.com/user",
+      "expect": "pass",
+      "note": "the sanctioned helper - secret by NAME, never by value"
+    }
+  ]
+}

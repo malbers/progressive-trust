@@ -1,0 +1,184 @@
+{
+  "_comment": [
+    "Fixture for `python3 state_file_guard.py --selftest`.",
+    "",
+    "decide() is called as a library function. No Bash command is constructed and no real",
+    "file is touched, so running this cannot damage a state file and cannot be intercepted",
+    "by the guard it is testing.",
+    "",
+    "The 'allow' cases are load-bearing. This guard's whole design bet is that Edit stays",
+    "frictionless and only whole-file writes are blocked. If an allow case starts failing,",
+    "the guard has drifted into blocking ordinary work, and the next thing that happens is",
+    "somebody works around it."
+  ],
+  "cases": [
+    {
+      "id": "write-current-md",
+      "tool_name": "Write",
+      "tool_input": {"file_path": "albers-advisory/current.md"},
+      "expect": "deny",
+      "why": "vector 1: Write on a protected basename"
+    },
+    {
+      "id": "write-memory-index",
+      "tool_name": "Write",
+      "tool_input": {"file_path": "memory/MEMORY.md"},
+      "expect": "deny",
+      "why": "vector 1: MEMORY*.md pattern"
+    },
+    {
+      "id": "write-memory-practices",
+      "tool_name": "Write",
+      "tool_input": {"file_path": "memory/MEMORY-practices.md"},
+      "expect": "deny",
+      "why": "vector 1: MEMORY-<suffix>.md still matches"
+    },
+    {
+      "id": "write-audit-log-combined",
+      "tool_name": "Write",
+      "tool_input": {"file_path": "audit-log-combined.md"},
+      "expect": "deny",
+      "why": "vector 1: audit-log*.md pattern"
+    },
+    {
+      "id": "write-claude-md",
+      "tool_name": "Write",
+      "tool_input": {"file_path": "/home/u/proj/CLAUDE.md"},
+      "expect": "deny",
+      "why": "vector 1: case-insensitive basename match"
+    },
+    {
+      "id": "write-arbitrary-memory-md",
+      "tool_name": "Write",
+      "tool_input": {"file_path": "memory/feedback_writing_style.md"},
+      "expect": "deny",
+      "why": "vector 1: any .md under a memory/ directory"
+    },
+    {
+      "id": "write-ordinary-source",
+      "tool_name": "Write",
+      "tool_input": {"file_path": "src/app/index.ts"},
+      "expect": "allow",
+      "why": "ordinary file, Write is correct here"
+    },
+    {
+      "id": "write-ordinary-readme",
+      "tool_name": "Write",
+      "tool_input": {"file_path": "README.md"},
+      "expect": "allow",
+      "why": "docs are not session state"
+    },
+    {
+      "id": "write-bot-runtime-log",
+      "tool_name": "Write",
+      "tool_input": {"file_path": "todo-bot/audit-log.md"},
+      "expect": "allow",
+      "why": "carve-out: bot runtime log, not session state"
+    },
+    {
+      "id": "edit-protected-file",
+      "tool_name": "Edit",
+      "tool_input": {"file_path": "memory/MEMORY.md"},
+      "expect": "allow",
+      "why": "Edit is the sanctioned path and must stay frictionless"
+    },
+    {
+      "id": "bash-redirect-overwrite",
+      "tool_name": "Bash",
+      "tool_input": {"command": "echo hi > current.md"},
+      "expect": "deny",
+      "why": "vector 2: > redirection"
+    },
+    {
+      "id": "bash-redirect-append",
+      "tool_name": "Bash",
+      "tool_input": {"command": "echo hi >> audit-log.md"},
+      "expect": "deny",
+      "why": "vector 2: >> is still a shell write"
+    },
+    {
+      "id": "bash-tee",
+      "tool_name": "Bash",
+      "tool_input": {"command": "cat x | tee memory/MEMORY.md"},
+      "expect": "deny",
+      "why": "vector 2: tee sits downstream of a pipe"
+    },
+    {
+      "id": "bash-sed-inplace",
+      "tool_name": "Bash",
+      "tool_input": {"command": "sed -i 's/a/b/' current.md"},
+      "expect": "deny",
+      "why": "vector 2: sed -i edits in place"
+    },
+    {
+      "id": "bash-cp-into-memory-dir",
+      "tool_name": "Bash",
+      "tool_input": {"command": "cp scratch.md memory/"},
+      "expect": "deny",
+      "why": "vector 2: directory destination creates files inside"
+    },
+    {
+      "id": "bash-powershell-setcontent",
+      "tool_name": "Bash",
+      "tool_input": {"command": "Set-Content -Path current.md -Value 'x'"},
+      "expect": "deny",
+      "why": "vector 2: the documented Write fallback"
+    },
+    {
+      "id": "bash-touch-allowed",
+      "tool_name": "Bash",
+      "tool_input": {"command": "touch memory/new_feedback.md"},
+      "expect": "allow",
+      "why": "touch is the sanctioned creation path"
+    },
+    {
+      "id": "bash-read-protected",
+      "tool_name": "Bash",
+      "tool_input": {"command": "cat current.md"},
+      "expect": "allow",
+      "why": "reading state files is normal and must not be blocked"
+    },
+    {
+      "id": "bash-redirect-ordinary",
+      "tool_name": "Bash",
+      "tool_input": {"command": "echo hi > build/out.txt"},
+      "expect": "allow",
+      "why": "ordinary redirection is untouched"
+    },
+    {
+      "id": "bash-stderr-redirect",
+      "tool_name": "Bash",
+      "tool_input": {"command": "python3 build.py 2>&1 | tail -5"},
+      "expect": "allow",
+      "why": "fd-to-fd redirection is not a file write"
+    },
+    {
+      "id": "inline-python-write",
+      "tool_name": "Bash",
+      "tool_input": {"command": "python3 -c \"open('current.md','w').write('x')\""},
+      "expect": "deny",
+      "why": "vector 3: the bypass that defeated vectors 1 and 2"
+    },
+    {
+      "id": "inline-node-write",
+      "tool_name": "Bash",
+      "tool_input": {"command": "node -e \"require('fs').writeFileSync('memory/MEMORY.md','x')\""},
+      "expect": "deny",
+      "why": "vector 3: node variant"
+    },
+    {
+      "id": "inline-python-read-only",
+      "tool_name": "Bash",
+      "tool_input": {"command": "python3 -c \"print(open('current.md').read())\""},
+      "expect": "allow",
+      "why": "read-only payloads stay allowed on purpose"
+    },
+    {
+      "id": "inline-python-ordinary-write",
+      "tool_name": "Bash",
+      "tool_input": {"command": "python3 -c \"open('out.txt','w').write('x')\""},
+      "expect": "allow",
+      "why": "write primitive, but no protected path named"
+    }
+  ]
+}

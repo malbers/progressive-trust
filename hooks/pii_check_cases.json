@@ -1,0 +1,165 @@
+{
+  "_note": "Cases for pii_check.scan(). All numbers here are SYNTHETIC (555 exchange or public opaque ids). Run: py -3 hooks/pii_check.py --selftest",
+  "cases": [
+    {
+      "name": "linkedin comm permalink, 10-digit job id",
+      "text": "https://www.linkedin.com/comm/jobs/view/4457053864/",
+      "expect": "clean"
+    },
+    {
+      "name": "linkedin plain jobs/view",
+      "text": "https://www.linkedin.com/jobs/view/4451913892/",
+      "expect": "clean"
+    },
+    {
+      "name": "REGRESSION: scheme-less linkedin paste",
+      "text": "linkedin.com/jobs/view/4451913892/",
+      "expect": "clean"
+    },
+    {
+      "name": "REGRESSION: google sheet gid (the 2026-07-27 case)",
+      "text": "https://docs.google.com/spreadsheets/d/abc/edit?gid=1259827479#gid=1259827479",
+      "expect": "clean"
+    },
+    {
+      "name": "GENERALISATION: opaque numeric id on an arbitrary host",
+      "text": "https://app.example.com/orders/4155551234",
+      "expect": "clean"
+    },
+    {
+      "name": "GENERALISATION: scheme-less arbitrary host",
+      "text": "shop.example.co.uk/invoice/2065550147",
+      "expect": "clean"
+    },
+    {
+      "name": "www. host without scheme",
+      "text": "www.example.com/asset/8005551212",
+      "expect": "clean"
+    },
+    {
+      "name": "CARVE-OUT: tel: URI must still block",
+      "text": "tel:+14155551234",
+      "expect": "phone"
+    },
+    {
+      "name": "CARVE-OUT: wa.me must still block",
+      "text": "https://wa.me/14155551234",
+      "expect": "phone"
+    },
+    {
+      "name": "CARVE-OUT: ?phone= query param must still block",
+      "text": "https://example.com/contact?phone=4155551234",
+      "expect": "phone"
+    },
+    {
+      "name": "CARVE-OUT: sms: URI must still block",
+      "text": "sms:4155551234",
+      "expect": "phone"
+    },
+    {
+      "name": "DELIBERATE NON-FIX: abbreviated url fragment still blocks",
+      "text": "(listing URL .../4457053864/)",
+      "expect": "phone"
+    },
+    {
+      "name": "bare phone in prose still blocks",
+      "text": "call me at 415-555-1234",
+      "expect": "phone"
+    },
+    {
+      "name": "phone in prose alongside a safe url still blocks",
+      "text": "see https://www.linkedin.com/jobs/view/4451913892/ or ring 415-555-1234",
+      "expect": "phone"
+    },
+    {
+      "name": "email inside a url query is still detected (digits-only masking)",
+      "text": "https://example.com/x?email=someone@notallowed-domain.test",
+      "expect": "email"
+    },
+    {
+      "name": "MACHINE ADDR: jobalerts-noreply (the 2026-08-24 case)",
+      "text": "From: jobalerts-noreply@linkedin.com",
+      "expect": "clean"
+    },
+    {
+      "name": "MACHINE ADDR: plain no-reply",
+      "text": "no-reply@example.com",
+      "expect": "clean"
+    },
+    {
+      "name": "MACHINE ADDR: noreply dotted",
+      "text": "no.reply@somecompany.co.uk",
+      "expect": "clean"
+    },
+    {
+      "name": "MACHINE ADDR: donotreply",
+      "text": "donotreply@bigco.com",
+      "expect": "clean"
+    },
+    {
+      "name": "MACHINE ADDR: mailer-daemon",
+      "text": "mailer-daemon@mx.example.net",
+      "expect": "clean"
+    },
+    {
+      "name": "STILL BLOCKS: a named third-party mailbox",
+      "text": "jane.doe@somecompany.com",
+      "expect": "email"
+    },
+    {
+      "name": "STILL BLOCKS: recruiter at a real domain",
+      "text": "david.anderson@zaniagrc.ai",
+      "expect": "email"
+    },
+    {
+      "name": "STILL BLOCKS: 'reply' alone is not 'no-reply'",
+      "text": "reply@example.com",
+      "expect": "email"
+    },
+    {
+      "name": "STILL BLOCKS: 'replyto' is not a machine address",
+      "text": "replyto@example.com",
+      "expect": "email"
+    },
+    {
+      "name": "plain-text linkedin job id (the 2026-09-18 case)",
+      "text": "Vyond, Head of Product (ADP Workforce Now, reached via LinkedIn job 4462868753).",
+      "expect": "clean"
+    },
+    {
+      "name": "labelled req id with colon",
+      "text": "Req ID: 4451913892",
+      "expect": "clean"
+    },
+    {
+      "name": "STILL BLOCKS: formatted phone after 'job'",
+      "text": "job 650-555-1234",
+      "expect": "phone"
+    },
+    {
+      "name": "STILL BLOCKS: bare 10 digits after 'call'",
+      "text": "call 6505551234",
+      "expect": "phone"
+    },
+    {
+      "name": "STILL BLOCKS: unlabelled bare 10 digits",
+      "text": "reach me on 6505551234 tomorrow",
+      "expect": "phone"
+    },
+    {
+      "name": "'LI <10-digit id>' in a utm note (2026-09-18)",
+      "text": "Venture Lead Creator Services, Adobe Incubator, Workday, LI 4466593075",
+      "expect": "clean"
+    },
+    {
+      "name": "STILL BLOCKS: formatted phone after 'LI'",
+      "text": "LI 650-555-1234",
+      "expect": "phone"
+    },
+    {
+      "name": "STILL BLOCKS: 'li' inside a word is not a label",
+      "text": "call Julie 6505551234",
+      "expect": "phone"
+    }
+  ]
+}
